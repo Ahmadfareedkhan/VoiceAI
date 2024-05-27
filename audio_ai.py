@@ -5,43 +5,41 @@ from dotenv import load_dotenv
 from elevenlabs import VoiceSettings
 from elevenlabs.client import ElevenLabs
 
-
-
-load_dotenv()
-
-
+# Load environment variables
 load_dotenv('.env')
-api_key = os.getenv('OPENAI_API_KEY')
-client = OpenAI(api_key=api_key)
 
-def generate_response(user_input):
-    completion = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        temperature=0.7,
-        messages=[
-            # {"role": "system", "content": proposal_template},
-            {"role": "user", "content": user_input}
-        ]
-    )
-    return completion.choices[0].message.content
+# Setup OpenAI client
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+if not OPENAI_API_KEY:
+    raise ValueError("OPENAI_API_KEY environment variable not set")
+openai_client = OpenAI(api_key=OPENAI_API_KEY)
 
+# Setup ElevenLabs client
 ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
-
 if not ELEVENLABS_API_KEY:
     raise ValueError("ELEVENLABS_API_KEY environment variable not set")
+elevenlabs_client = ElevenLabs(api_key=ELEVENLABS_API_KEY)
 
-client = ElevenLabs(
-    api_key=ELEVENLABS_API_KEY,
-)
+def generate_response(user_input):
+    """
+    Generates a text response using OpenAI's GPT-3.5 Turbo model.
 
+    Args:
+        user_input (str): The user input text for which a response is needed.
+
+    Returns:
+        str: Generated response text.
+    """
+    completion = openai_client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        temperature=0.7,
+        messages=[{"role": "user", "content": user_input}]
+    )
+    return completion.choices[0].message.content
 
 def text_to_speech_file(text: str) -> str:
     """
     Converts text to speech and saves the output as an MP3 file.
-
-    This function uses a specific client for text-to-speech conversion. It configures
-    various parameters for the voice output and saves the resulting audio stream to an
-    MP3 file with a unique name.
 
     Args:
         text (str): The text content to convert to speech.
@@ -49,13 +47,12 @@ def text_to_speech_file(text: str) -> str:
     Returns:
         str: The file path where the audio file has been saved.
     """
-    # Calling the text_to_speech conversion API with detailed parameters
-    response = client.text_to_speech.convert(
-        voice_id="pNInz6obpgDQGcFmaJgB",  # Adam pre-made voice
+    response = elevenlabs_client.text_to_speech.convert(
+        voice_id="pNInz6obpgDQGcFmaJgB",  # Example voice ID
         optimize_streaming_latency="0",
         output_format="mp3_22050_32",
         text=text,
-        model_id="eleven_turbo_v2",  # use the turbo model for low latency, for other languages use the `eleven_multilingual_v2`
+        model_id="eleven_turbo_v2",  # Low latency model
         voice_settings=VoiceSettings(
             stability=0.0,
             similarity_boost=1.0,
@@ -64,20 +61,17 @@ def text_to_speech_file(text: str) -> str:
         ),
     )
 
-    # Generating a unique file name for the output MP3 file
     save_file_path = f"{uuid.uuid4()}.mp3"
-    # Writing the audio stream to the file
-
     with open(save_file_path, "wb") as f:
         for chunk in response:
             if chunk:
                 f.write(chunk)
 
     print(f"A new audio file was saved successfully at {save_file_path}")
-
-    # Return the path of the saved audio file
     return save_file_path
 
-
 if __name__ == "__main__":
-    text_to_speech_file("Hello, world! This is a test of the ElevenLabs API.")
+    user_input = "Tell me about the latest advancements in AI technology."
+    generated_text = generate_response(user_input)
+    print("Generated Text:", generated_text)
+    text_to_speech_file(generated_text)
