@@ -32,6 +32,7 @@ def generate_response(user_input):
     """
     completion = openai_client.chat.completions.create(
         model="gpt-3.5-turbo",
+        max_tokens=50,
         temperature=0.7,
         messages=[{"role": "user", "content": user_input}]
     )
