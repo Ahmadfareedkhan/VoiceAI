@@ -1,7 +1,13 @@
+import os
+import uuid
 from openai import OpenAI
-import requests
-import os 
 from dotenv import load_dotenv
+from elevenlabs import VoiceSettings
+from elevenlabs.client import ElevenLabs
+
+
+
+load_dotenv()
 
 
 load_dotenv('.env')
@@ -19,37 +25,59 @@ def generate_response(user_input):
     )
     return completion.choices[0].message.content
 
-def synthesize_speech(text, elevenlabs_api_key):
-    """
-    Convert text to speech using ElevenLabs API.
-    """
-    url = "https://api.elevenlabs.io/synthesize"
-    headers = {
-        "Authorization": f"Bearer {elevenlabs_api_key}",
-        "Content-Type": "application/json"
-    }
-    data = {
-        "text": text,
-         "voice": "en-US-Wavenet-A", # Optionally specify the voice model
-    }
-    response = requests.post(url, json=data, headers=headers)
-    if response.status_code == 200:
-        with open('output.mp3', 'wb') as f:
-            f.write(response.content)
-        print("Speech synthesis complete, output saved as 'output.mp3'.")
-    else:
-        print("Failed to synthesize speech: ", response.text)
+ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
 
-def main():
-    # Replace with your actual API keys
-    # OPENAI_API_KEY = "your_openai_api_key_here"
-    ELEVENLABS_API_KEY = "f7f095d8f91be4f8d66d389046b7f673"
+if not ELEVENLABS_API_KEY:
+    raise ValueError("ELEVENLABS_API_KEY environment variable not set")
 
-    # Example usage
-    user_input = "Explain the concept of gravitational waves."
-    generated_text = generate_response(user_input)
-    print("Generated Text:", generated_text)
-    synthesize_speech(generated_text, ELEVENLABS_API_KEY)
+client = ElevenLabs(
+    api_key=ELEVENLABS_API_KEY,
+)
+
+
+def text_to_speech_file(text: str) -> str:
+    """
+    Converts text to speech and saves the output as an MP3 file.
+
+    This function uses a specific client for text-to-speech conversion. It configures
+    various parameters for the voice output and saves the resulting audio stream to an
+    MP3 file with a unique name.
+
+    Args:
+        text (str): The text content to convert to speech.
+
+    Returns:
+        str: The file path where the audio file has been saved.
+    """
+    # Calling the text_to_speech conversion API with detailed parameters
+    response = client.text_to_speech.convert(
+        voice_id="pNInz6obpgDQGcFmaJgB",  # Adam pre-made voice
+        optimize_streaming_latency="0",
+        output_format="mp3_22050_32",
+        text=text,
+        model_id="eleven_turbo_v2",  # use the turbo model for low latency, for other languages use the `eleven_multilingual_v2`
+        voice_settings=VoiceSettings(
+            stability=0.0,
+            similarity_boost=1.0,
+            style=0.0,
+            use_speaker_boost=True,
+        ),
+    )
+
+    # Generating a unique file name for the output MP3 file
+    save_file_path = f"{uuid.uuid4()}.mp3"
+    # Writing the audio stream to the file
+
+    with open(save_file_path, "wb") as f:
+        for chunk in response:
+            if chunk:
+                f.write(chunk)
+
+    print(f"A new audio file was saved successfully at {save_file_path}")
+
+    # Return the path of the saved audio file
+    return save_file_path
+
 
 if __name__ == "__main__":
-    main()
+    text_to_speech_file("Hello, world! This is a test of the ElevenLabs API.")
