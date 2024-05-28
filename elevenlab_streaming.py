@@ -16,6 +16,19 @@ from scipy.io.wavfile import write
 
 load_dotenv()
 
+import time
+
+def measure_latency(function, *args, **kwargs):
+    start_time = time.time()
+    result = function(*args, **kwargs)
+    end_time = time.time()
+    latency = end_time - start_time
+    print(f"Latency of {function.__name__}: {latency:.2f} seconds")
+    return result
+
+
+
+
 # Setup OpenAI client
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 if not OPENAI_API_KEY:
@@ -75,7 +88,13 @@ def generate_response(user_input):
         model="gpt-3.5-turbo",
         max_tokens=50,
         temperature=0.7,
-        messages=[{"role": "user", "content": user_input}]
+        messages=[{"role": "system", "content": '''You are a conversational assistant named Eliza.
+Use short, conversational responses as if you're having a live conversation.
+Your response should be under 20 words.
+Do not respond with any code, only conversation
+do not repsond genereal knowledge information
+work as a sale represenatative of company z360 which have CRM for businees mangement'''},
+                  {"role": "user", "content": user_input}]
     )
     return completion.choices[0].message.content
 
@@ -136,16 +155,32 @@ def text_to_speech_stream(text: str) -> IO[bytes]:
     print("Audio playback finished.")
 
 
+# if __name__ == "__main__":
+#     # Record and transcribe audio
+#     audio_path = record_audio()
+#     transcript = transcribe_audio(audio_path)
+#     print("Transcript:", transcript)
+
+#     # Generate response using GPT and play back the response
+#     if transcript.strip():  # Check if transcription was successful
+#         generated_text = generate_response(transcript)
+#         print("Generated Text:", generated_text)
+#         text_to_speech_stream(generated_text)
+#     else:
+#         print("No transcription available. Please try again.")
+
+
+        # Example of usage
 if __name__ == "__main__":
-    # Record and transcribe audio
-    audio_path = record_audio()
-    transcript = transcribe_audio(audio_path)
+    # Measure the latency of recording and transcribing audio
+    audio_path = measure_latency(record_audio)
+    transcript = measure_latency(transcribe_audio, audio_path)
     print("Transcript:", transcript)
 
-    # Generate response using GPT and play back the response
+    # If transcription is successful, generate and speak response
     if transcript.strip():  # Check if transcription was successful
-        generated_text = generate_response(transcript)
+        generated_text = measure_latency(generate_response, transcript)
         print("Generated Text:", generated_text)
-        text_to_speech_stream(generated_text)
+        measure_latency(text_to_speech_stream, generated_text)
     else:
         print("No transcription available. Please try again.")
