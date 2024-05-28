@@ -155,22 +155,7 @@ def text_to_speech_stream(text: str) -> IO[bytes]:
     print("Audio playback finished.")
 
 
-# if __name__ == "__main__":
-#     # Record and transcribe audio
-#     audio_path = record_audio()
-#     transcript = transcribe_audio(audio_path)
-#     print("Transcript:", transcript)
 
-#     # Generate response using GPT and play back the response
-#     if transcript.strip():  # Check if transcription was successful
-#         generated_text = generate_response(transcript)
-#         print("Generated Text:", generated_text)
-#         text_to_speech_stream(generated_text)
-#     else:
-#         print("No transcription available. Please try again.")
-
-
-        # Example of usage
 if __name__ == "__main__":
     # Measure the latency of recording and transcribing audio
     audio_path = measure_latency(record_audio)
